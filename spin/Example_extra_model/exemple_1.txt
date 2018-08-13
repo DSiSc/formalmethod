@@ -1,0 +1,315 @@
+For this example, we take the following solution to the mutual exclusion problem, discussed earlier, published in 1966 by H. Hyman in the Communications of the ACM. It was listed, in pseudo Algol, as follows.
+
+  1 Boolean array b(0;1) integer k, i,
+
+  2 comment process i, with i either 0 or 1, and k = 1-i;
+
+  3 C0:	b(i) := false;
+
+  4 C1:	if k != i then begin;
+
+  5 C2:	if not b(1-i) then go to C2;
+
+  6 	else k := i; go to C1 end;
+
+  7 	else critical section;
+
+  8 	b(i) := true;
+
+  9 	remainder of program;
+
+ 10 	go to C0;
+
+ 11 	end
+The solution, as Dekker's earlier solution, is for two processes, numbered 0 and 1. Suppose we wanted to prove that Hyman's solution truly guaranteed mutually exclusive access to the critical section. Our first task is to build a model of the solution in Promela . While we're at it, we can pick some more useful names for the variables that are used.
+
+   1  bool want[2];	/* Bool array b */
+
+   2  bool turn;	/* integer    k */
+
+   3  
+
+   4  proctype P(bool i)
+
+   5  {
+
+   6  	want[i] = 1;
+
+   7  	do
+
+   8  	:: (turn != i) ->
+
+   9  		(!want[1-i]);
+
+  10  		turn = i
+
+  11  	:: (turn == i) ->
+
+  12  		break
+
+  13  	od;
+
+  14  	skip; /* critical section */
+
+  15  	want[i] = 0
+
+  16  }
+
+  17  
+
+  18  init { run P(0); run P(1) }
+We can generate, compile, and run a verifier for this model, to see if there are any major problems, such as a global system deadlock.
+
+	$ spin -a hyman0
+
+	$ gcc -o pan pan.c
+
+	$ ./pan
+
+	full statespace search for:
+
+	assertion violations and invalid endstates
+
+	vector 20 byte, depth reached 19, errors: 0
+
+	      79 states, stored
+
+	       0 states, linked
+
+	      38 states, matched	total: 117
+
+	hash conflicts: 4 (resolved)
+
+	(size 2^18 states, stack frames: 3/0)
+
+
+	unreached code _init (proc 0):
+
+		reached all 3 states
+
+	unreached code P (proc 1):
+
+		reached all 12 states
+The model passes this first test. What we are really interested in, however, is if the algorithm guarantees mutual exclusion. There are several ways to proceed. The simplest is to just add enough information to the model that we can express the correctness requirement in a Promela assertion.
+
+   1  bool want[2];
+
+   2  bool turn;
+
+   3  byte cnt;
+
+   4  
+
+   5  proctype P(bool i)
+
+   6  {
+
+   7  	want[i] = 1;
+
+   8  	do
+
+   9  	:: (turn != i) ->
+
+  10  		(!want[1-i]);
+
+  11  		turn = i
+
+  12  	:: (turn == i) ->
+
+  13  		break
+
+  14  	od;
+
+  15  	skip; /* critical section */
+
+  16  	cnt = cnt+1;
+
+  17  	assert(cnt == 1);
+
+  18  	cnt = cnt-1;
+
+  19  	want[i] = 0
+
+  20  }
+
+  21  
+
+  22  init { run P(0); run P(1) }
+We have added a global variable cnt that is incremented upon each access to the critical section, and decremented upon each exit from it. The maximum value that this variable should ever have is 1, and it can only have this value when a process is inside the critical section.
+
+	$ spin -a hyman1
+
+	$ gcc -o pan pan.c
+
+	$ ./pan
+
+	assertion violated (cnt==1)
+
+	pan: aborted (at depth 15)
+
+	pan: wrote pan.trail
+
+	full statespace search for:
+
+	assertion violations and invalid endstates
+
+	search was not completed
+
+	vector 20 byte, depth reached 25, errors: 1
+
+	     123 states, stored
+
+	       0 states, linked
+
+	      55 states, matched	total: 178
+
+	hash conflicts: 42 (resolved)
+
+	(size 2^18 states, stack frames: 3/0)
+The verifier claims that the assertion can be violated. We can use the error trail to check it with Spin 's -t option:
+
+	$ spin -t -p hyman1
+
+	proc  0 (_init)	line 24 (state 2)
+
+	proc  0 (_init)	line 24 (state 3)
+
+	proc  2 (P)	line 8 (state 7)
+
+	proc  2 (P)	line 9 (state 2)
+
+	proc  2 (P)	line 10 (state 3)
+
+	proc  2 (P)	line 11 (state 4)
+
+	proc  1 (P)	line 8 (state 7)
+
+	proc  1 (P)	line 12 (state 5)
+
+	proc  1 (P)	line 15 (state 10)
+
+	proc  2 (P)	line 8 (state 7)
+
+	proc  2 (P)	line 12 (state 5)
+
+	proc  2 (P)	line 15 (state 10)
+
+	proc  2 (P)	line 16 (state 11)
+
+	proc  2 (P)	line 17 (state 12)
+
+	proc  2 (P)	line 18 (state 13)
+
+	proc  1 (P)	line 16 (state 11)
+
+	proc  1 (P)	line 17 (state 12)
+
+	spin: "hyman1" line 17: assertion violated
+
+	step 17, #processes: 3
+
+			want[0] = 1
+
+			_p[0] = 12
+
+			turn[0] = 1
+
+			cnt[0] = 2
+
+
+	proc  2 (P)	line 18 (state 13)
+
+	proc  1 (P)	line 17 (state 12)
+
+	proc  0 (_init)	line 24 (state 3)
+
+	3 processes created
+Here is another way to catch the error. We again lace the model with the information that will allow us to count the number of processes in the critical section.
+
+   1  bool want[2];
+
+   2  bool turn;
+
+   3  byte cnt;
+
+   4  
+
+   5  proctype P(bool i)
+
+   6  {
+
+   7  	want[i] = 1;
+
+   8  	do
+
+   9  	:: (turn != i) ->
+
+  10  		(!want[1-i]);
+
+  11  		turn = i
+
+  12  	:: (turn == i) ->
+
+  13  		break
+
+  14  	od;
+
+  15  	cnt = cnt+1;
+
+  16  	skip;	/* critical section */
+
+  17  	cnt = cnt-1;
+
+  18  	want[i] = 0
+
+  19  }
+
+  20  
+
+  21  proctype monitor()
+
+  22  {
+
+  23  	assert(cnt == 0 || cnt == 1)
+
+  24  }
+
+  25  
+
+  26  init {
+
+  27  	run P(0); run P(1); run monitor()
+
+  28  }
+The invariant condition on the value of counter cnt is now place in a separate process monitor() (the name is immaterial). The extra process runs along with the two others. It will always terminate in one step, but it could execute that step at any time. The systems modeled by Promela and verified by Spin are completely asynchronous. That means that the verification of Spin take into account all possible relative timings of the three processes. In a full verification, the assertion therefore can be evaluated at any time during the lifetime of the other two processes. If the verifier reports that it is not violated we can indeed conclude that there is no execution sequence at all (no way to select relative speeds for the three processes) in which the assertion can be violated. The setup with the monitor process is therefore an elegant way to check the validity of a system invariant. The verification produces:
+
+	$ spin -a hyman2
+
+	$ gcc -o pan pan.c
+
+	$ ./pan
+
+	assertion violated ((cnt==0)||(cnt==1))
+
+	pan: aborted (at depth 15)
+
+	pan: wrote pan.trail
+
+	full statespace search for:
+
+	assertion violations and invalid endstates
+
+	search was not completed
+
+	vector 24 byte, depth reached 26, errors: 1
+
+	     368 states, stored
+
+	       0 states, linked
+
+	     379 states, matched	total: 747
+
+	hash conflicts: 180 (resolved)
+
+	(size 2^18 states, stack frames: 4/0)
+Because of the extra interleaving of the two processes with a third monitor, the number of system states that had to be searched has increased, but the error is again correctly reported.

@@ -1,0 +1,37 @@
+The model of Smart Contract and Check analysis 
+Firstly we choose a typical smart shopping contract model as an example with the it's description and content ; secondly, with the aid of smart tools , we generates the smart contract model and description of the behavior of the contractual entity. Then, use the model verification tool SPIN to analyze and verify the model.
+1.Description of Shopping Smart Contract(SSC):
+Shopping_Smart_Contract( Merchant, Customer,goods_information, distribution, payment,) 
+Begin 
+IF goods are available 
+　　　Merchant select goods to purchase 
+THEN IF Merchant accept the goods_price 
+　　　Merchant pay for the goods to Contract account 
+　　　THEN IF Merchant confirm the information of transaction 
+Merchant send the goods to Customer and SSC set the terminator=timestamp + max_time 
+ELSE  The transaction failed and returned the money to customer 
+IF Customer received the goods with the prescribed time 
+　　　Customer send confirmation message 
+THEN IF Contract received confirmation message 
+Contract pay to Merchant 
+ELSE 
+The transaction failed and returned the money to customer 
+END
+
+
+After analyse of SSC,we can build a reasonable SSC model. This model contain three important roles:consumer，merchant and smart contract account.The customer is the executor of the customer process, the merchant is the executor of the merchant process, and the contract account can be understood as a trusted third party account. The smart contract account is managed by SSC as an intermediary to coordinate customer and merchant operations and it ensure that the transfer operations involved in the SSC are based on 
+the status of the contract.It guarantees the fairness and reliability of the contract.
+The description of SSC can also be expressed in these lines:
+
+
+(1)customer-->merchant:send a shopping request
+(2)merchant-->customer:confirm that you can shop
+(3)customer-->merchant:confirm tshe purchased goods
+(4)merchant-->customer:send goods
+(5)customer-->smart contract account:send money
+(6)customer-->merchant:receive the goods and confiirm the transaction
+(7)smart contract account-->merchant:send money
+(8)merchant-->customer:confirm the completion of transaction
+
+According to these lines, we can clearly know the steps of SSC.
+And then we would provide the code for this SSC,which can simulate the process of SSC.
