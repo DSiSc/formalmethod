@@ -1,0 +1,34 @@
+1.The definition of formal verification:
+
+In the design process of computer hardware (especially integrated circuits) and software systems, the meaning of formal verification is to use mathematical methods to prove its correctness or inaccuracy according to some or some formal specifications or attributes.Formal verification is a systematic process that uses mathematical reasoning to verify that design intent (indicators) is implemented in implementation (RTL). Formal verification overcomes all three simulation challenges, as formal verification can exhaustively check all input values that may change over time.
+
+Appearance of formal verification:
+
+Since simulation waste too much time for very large scale designs, formal verification has emerged. After confirming that the functional simulation of the design is correct, the results of each step of the design implementation can be compared with the results of the previous step, that is, the equivalent check. If they are consistent, the design is reasonable and no simulation is necessary.Formal verification is mainly to make a consistent comparison of logical forms and functions, which is done by the tool itself, without the need to develop test vectors. And because the logical structure changes between each step of the implementation are not very large, the form of all logic will be very fast. This is much less time than the simulation. 
+
+
+
+
+2.Advantages of formal verification:
+
+1).Because formal verification techniques use mathematical methods to directly verify with the functional description or reference design, the tester does not have to consider how to obtain the test vector.
+
+2).Formal verification is to verify all possible cases of the specified description, rather than just testing a subset of them, thus effectively overcoming the shortcomings of simulation verification.
+
+3)Formal verification can be performed from the system level to the gate level, and the verification time is short, which helps to find and correct errors in the circuit design as early as possible, and it is possible to shorten the design cycle.
+
+4).The formal verification process can prove that a system does not have a defect or meets one or some attributes. Software testing can't prove that the system has no defects, and it can't prove that it meets certain attributes. The system cannot be proven or tested as defect-free because it is impossible to formally specify what is "no defect." All that can be done is to prove that a system has no imaginable flaws and that it satisfies all the attributes that make the system functional and functional.
+
+
+
+method of formal verification:
+
+Formal Verification is a verification method for IC design. Its main idea is to verify the correct function of a design by using formal proof. Formal verification can be divided into three categories: Equivalence Checking, Formal Model Checking (also known as characterization), and Theory Prover.
+
+1).The verification of the equivalence checking is very important.For exemple,it is used to verify whether the RTL design is consistent with the gate level netlist, the gate level netlist, and the gate level netlist. In the process of scan chain rearrangement and clock tree synthesis, the parity check can be used to ensure the consistency of the netlist. Equivalence checks have been incorporated into the IC standard design process. The equivalence check is very useful when checking ECO. For example, when modifying the gate-level netlist, the designer writes an OR gate as a NOR gate due to a hand error. The equivalence check tool can easily find such an error by comparing the RTL design with the gate-level netlist.
+
+2).Model checking uses temporal logic to describe the specification, and an effective search method to check whether a given system meets the specification. Model checking is a hot topic of current research, but the problem of the limited size of the verification has not been well solved.
+
+3).The theorem proves that both the system and the norm are expressed as mathematical logic formulas, seeking a description from the axiom. The theorem proves that the model of verification is not limited, but requires manual intervention by the user and more background knowledge.
+
+
