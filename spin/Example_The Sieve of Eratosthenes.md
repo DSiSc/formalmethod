@@ -2,7 +2,8 @@ This example is a PROMELA version of an ancient algorithm for finding primes by 
 
 Figure 1 The Sieve of Eratosthenes
 
-```1 /*
+```
+ 1 /*
  2     The Sieve of Eratosthenes (c. 276-196 BC)
  3     Prints all prime numbers up to MAX
  4 */
@@ -126,7 +127,8 @@ In this first model we are using one process for each prime number that is found
 
 Figure 2 Alternative Structure for Sieve
 
-```1 mtype = { number, eof };
+```
+ 1 mtype = { number, eof };
  2
  3 chan found = [MAX] of { int };
  4
