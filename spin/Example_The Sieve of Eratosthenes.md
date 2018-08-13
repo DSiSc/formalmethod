@@ -1,9 +1,57 @@
 This example is a PROMELA version of an ancient algorithm for finding primes by counting off numbers and systematically intercepting the non-primes among them. The algorithm, a favorite programming exercise today, is due to the Greek philosopher and mathematician Eratosthenes of Cyrene (a city in modern day Libya which is today called Shahhat). Figure 1 shows a version in PROMELA that makes use of the fact that we can use dynamic process creation and pass channel identifiers between running processes.
 
 Figure 1 The Sieve of Eratosthenes
- 
-![](https://i.imgur.com/Rjkg9qt.jpg)
-![](https://i.imgur.com/9AK84Tq.jpg)
+
+```1 /*
+ 2     The Sieve of Eratosthenes (c. 276-196 BC)
+ 3     Prints all prime numbers up to MAX
+ 4 */
+ 5 #define MAX 25
+ 6
+ 7 mtype = { number, eof };
+ 8
+ 9 chan root = [0] of { mtype, int };
+10
+11 proctype sieve(chan c; int prime)
+12 {    chan child = [0] of { mtype, int };
+13      bool haschild;
+14      int n;
+15
+16      printf("MSC: %d is prime\n", prime);
+17 end: do
+18      :: c?number(n) ->
+19         if
+20         :: (n%prime) == 0 ->
+21            printf("MSC: %d = %d*%d\n", n, prime, n/prime)
+22         :: else ->
+23         if
+24            :: !haschild -> /* new prime */
+25                   haschild = true;
+26                   runsieve(child, n);
+27            :: else ->
+28                   child!number(n)
+29            fi;
+30         fi
+31      :: c?eof(0) ->
+32         break
+33      od;
+34      if
+35      :: haschild ->
+36         child!eof(0)
+37      :: else
+38      fi
+39 }
+40
+41 init
+42 {   int n = 2;
+43
+44     run sieve(root, n);
+45     do
+46     :: (n < MAX) -> n++; root!number(n)
+47     :: (n >= MAX) -> root!eof(0); break
+48     od
+49 }
+```
 
 Because a PROMELA model must always be finite, we have to place an upper-bound on the largest integer value that we will test for primality. SPIN is not designed to handle computational problems, so do not expect to get away with a very large bound here. The bound is defined in Figure 1 in a macro definition named MAX. We have used the value 25. Only two types of messages are used, defined in an mtype declaration, and named number and eof. The latter type of message is used to trigger an orderly termination of the system of processes when the test for primality of the number with the maximal value allowed has been completed.
 
@@ -47,7 +95,15 @@ because the sieve process is guaranteed to be the only process to read from the 
 
 could be included on line 43 in the init process to assert that the initial process is the only process to send messages to channel root. If we do so, however, the verifier will warn us sternly that channel assertions are not allowed on rendezvous channels.
 
-![](https://i.imgur.com/7CFw3jw.jpg)
+```
+$ spin -a eratosthenes
+$ cc -o pan pan.c
+$ ./pan
+chan root (0), sndr proc :init: (0)
+pan: xs chans cannot be used for rv (at depth 0)
+pan: wrote eratosthenes.trail
+...
+```
 
 
 We can correct this by turning the two rendezvous channels declared on lines 9 and 12 in Figure 1 into buffered message channels with the minimum storage capacity of one message. Line 9 in Figure 1 then becomes:
@@ -70,7 +126,49 @@ In this first model we are using one process for each prime number that is found
 
 Figure 2 Alternative Structure for Sieve
 
-![](https://i.imgur.com/C8XHzzM.jpg)
+```1 mtype = { number, eof };
+ 2
+ 3 chan found = [MAX] of { int };
+ 4
+ 5 active proctype sieve()
+ 6 {  int n = 3;
+ 7    int prime = 2;
+ 8    int i;
+ 9
+10    found!prime;
+11    printf("MSC: %d is prime\n", prime);
+12    do
+13    :: n < MAX ->
+14       i = len(found);
+15       assert(i > 0);
+16       do
+17       :: i > 0 ->
+18           found?prime;
+19           found!prime; /* put back at end */
+20           if
+21           :: (n%prime) == 0 ->
+22           /* printf("MSC: %d = %d*%d\n",
+23                      n, prime, n/prime); */
+24              break
+25           :: else ->
+26               i--
+27           fi
+28       :: else ->
+29           break
+30       od;
+31       if
+32       :: i == 0 ->
+33           found!n;
+34           printf("MSC: %d is prime number %d\n",
+35                       n, len(found))
+36       :: else
+37       fi;
+38       n++
+39    :: else ->
+40       break
+41    od
+42 }
+```
         
 This time we store prime numbers in a channel, and retrieve them from there for primality testing. We have set the capacity of the channel generously to the value of MAX, although a much smaller value would also suffice. Only a number that is not divisible by any of the previously discovered primes is itself prime and can then be added into the channel. In this version of the sieve process we have left the macro MAX undefined, which means that we can now pass a value in via a command-line argument to SPIN. We can now surpass the old limit of 254 primes easily, for instance, as follows:
 
